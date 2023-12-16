@@ -44,5 +44,8 @@
 /* Ignore atomic blocks as they are unnecessary on this MCU */
 #define IGNORE_ATOMIC_BLOCK
 
+/* Drive high instead of pull high to unselect */
+#define MATRIX_UNSELECT_DRIVE_HIGH
+
 #define RGB_MATRIX_KEYPRESSES
 #define RGB_MATRIX_FRAMEBUFFER_EFFECTS
