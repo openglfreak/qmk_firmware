@@ -128,12 +128,18 @@ static void dummy_usb_cb(USBDriver *usbp, usbep_t ep) {
     (void)ep;
 }
 
+#if USB_SUPPORTS_DBLBUF == TRUE
+#define USB_EP_MODE_TYPE_INTR_DBLBUF (USB_EP_MODE_TYPE_INTR | USB_EP_MODE_FLAGS_DBLBUF)
+#else
+#define USB_EP_MODE_TYPE_INTR_DBLBUF USB_EP_MODE_TYPE_INTR
+#endif
+
 #ifndef KEYBOARD_SHARED_EP
 /* keyboard endpoint state structure */
 static USBInEndpointState kbd_ep_state;
 /* keyboard endpoint initialization structure (IN) - see USBEndpointConfig comment at top of file */
 static const USBEndpointConfig kbd_ep_config = {
-    USB_EP_MODE_TYPE_INTR,  /* Interrupt EP */
+    USB_EP_MODE_TYPE_INTR_DBLBUF, /* Double-buffered Interrupt EP */
     NULL,                   /* SETUP packet notification callback */
     dummy_usb_cb,           /* IN notification callback */
     NULL,                   /* OUT notification callback */
@@ -169,7 +175,7 @@ static USBInEndpointState shared_ep_state;
 
 /* shared endpoint initialization structure (IN) - see USBEndpointConfig comment at top of file */
 static const USBEndpointConfig shared_ep_config = {
-    USB_EP_MODE_TYPE_INTR,  /* Interrupt EP */
+    USB_EP_MODE_TYPE_INTR_DBLBUF, /* Double-buffered Interrupt EP */
     NULL,                   /* SETUP packet notification callback */
     dummy_usb_cb,           /* IN notification callback */
     NULL,                   /* OUT notification callback */
@@ -826,13 +832,16 @@ uint8_t keyboard_leds(void) {
     return keyboard_led_state;
 }
 
-void send_report(uint8_t endpoint, void *report, size_t size) {
+void send_report(uint8_t endpoint, void *report, size_t size, bool async) {
     osalSysLock();
     if (usbGetDriverStateI(&USB_DRIVER) != USB_ACTIVE) {
         osalSysUnlock();
         return;
     }
 
+#if USB_SUPPORTS_DBLBUF == TRUE
+    if (!async || !(USB_DRIVER.epc[endpoint]->ep_mode & USB_EP_MODE_FLAGS_DBLBUF))
+#endif
     if (usbGetTransmitStatusI(&USB_DRIVER, endpoint)) {
         /* Need to either suspend, or loop and call unlock/lock during
          * every iteration - otherwise the system will remain locked,
@@ -859,22 +868,64 @@ void send_report(uint8_t endpoint, void *report, size_t size) {
     osalSysUnlock();
 }
 
+static inline bool has_only_added_bytes(uint8_t *old, uint8_t *new, size_t count) {
+    while (count--) {
+        uint8_t o = *old, n = *new;
+        *old = n;
+        old++;
+        new++;
+        if (o != n && o != 0) {
+            while (count--)
+                *old++ = *new++;
+            return false;
+        }
+    }
+    return true;
+}
+
 /* prepare and start sending a report IN
  * not callable from ISR or locked state */
 void send_keyboard(report_keyboard_t *report) {
+#if USB_SUPPORTS_DBLBUF == TRUE
+    bool async = has_only_added_bytes(keyboard_report_sent.keys, report->keys, KEYBOARD_REPORT_KEYS);
+#else
+    bool async = false;
+#endif
+
     /* If we're in Boot Protocol, don't send any report ID or other funky fields */
     if (!keyboard_protocol) {
-        send_report(KEYBOARD_IN_EPNUM, &report->mods, 8);
+        send_report(KEYBOARD_IN_EPNUM, &report->mods, 8, async);
     } else {
-        send_report(KEYBOARD_IN_EPNUM, report, KEYBOARD_REPORT_SIZE);
+        send_report(KEYBOARD_IN_EPNUM, report, KEYBOARD_REPORT_SIZE, async);
     }
 
     keyboard_report_sent = *report;
 }
 
+static inline bool has_only_added_bits(uint8_t *old, uint8_t *new, size_t count) {
+    while (count--) {
+        uint8_t o = *old, n = *new;
+        *old = n;
+        old++;
+        new++;
+        if ((o | n) != n) {
+            while (count--)
+                *old++ = *new++;
+            return false;
+        }
+    }
+    return true;
+}
+
 void send_nkro(report_nkro_t *report) {
 #ifdef NKRO_ENABLE
-    send_report(SHARED_IN_EPNUM, report, sizeof(report_nkro_t));
+#if USB_SUPPORTS_DBLBUF == TRUE
+    static uint8_t bits[1 + NKRO_REPORT_BITS];
+    bool async = has_only_added_bits(bits, &report->mods, sizeof(bits));
+#else
+    bool async = false;
+#endif
+    send_report(SHARED_IN_EPNUM, report, sizeof(report_nkro_t), async);
 #endif
 }
 
@@ -885,7 +936,7 @@ void send_nkro(report_nkro_t *report) {
 
 void send_mouse(report_mouse_t *report) {
 #ifdef MOUSE_ENABLE
-    send_report(MOUSE_IN_EPNUM, report, sizeof(report_mouse_t));
+    send_report(MOUSE_IN_EPNUM, report, sizeof(report_mouse_t), false);
     mouse_report_sent = *report;
 #endif
 }
@@ -897,25 +948,25 @@ void send_mouse(report_mouse_t *report) {
 
 void send_extra(report_extra_t *report) {
 #ifdef EXTRAKEY_ENABLE
-    send_report(SHARED_IN_EPNUM, report, sizeof(report_extra_t));
+    send_report(SHARED_IN_EPNUM, report, sizeof(report_extra_t), false);
 #endif
 }
 
 void send_programmable_button(report_programmable_button_t *report) {
 #ifdef PROGRAMMABLE_BUTTON_ENABLE
-    send_report(SHARED_IN_EPNUM, report, sizeof(report_programmable_button_t));
+    send_report(SHARED_IN_EPNUM, report, sizeof(report_programmable_button_t), false);
 #endif
 }
 
 void send_joystick(report_joystick_t *report) {
 #ifdef JOYSTICK_ENABLE
-    send_report(JOYSTICK_IN_EPNUM, report, sizeof(report_joystick_t));
+    send_report(JOYSTICK_IN_EPNUM, report, sizeof(report_joystick_t), false);
 #endif
 }
 
 void send_digitizer(report_digitizer_t *report) {
 #ifdef DIGITIZER_ENABLE
-    send_report(DIGITIZER_IN_EPNUM, report, sizeof(report_digitizer_t));
+    send_report(DIGITIZER_IN_EPNUM, report, sizeof(report_digitizer_t), false);
 #endif
 }
 
