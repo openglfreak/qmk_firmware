@@ -131,8 +131,6 @@ static bool select_col(uint8_t col) {
     } else {
         if (col == 8) {
             shiftout_single(0x00);
-        } else {
-            shiftout_single(0x01);
         }
         return true;
     }
@@ -149,8 +147,7 @@ static void unselect_col(uint8_t col) {
         setPinInputHigh_atomic(pin);
 #endif
     } else {
-        if (col == (MATRIX_COLS - 1))
-            shiftout_single(0x01);
+        shiftout_single(0x01);
     }
 }
 
