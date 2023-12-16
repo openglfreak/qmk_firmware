@@ -76,6 +76,7 @@ static inline uint8_t readMatrixPin(pin_t pin) {
 
 static void shiftOut(uint8_t dataOut) {
     ATOMIC_BLOCK_FORCEON {
+#pragma GCC unroll 65534
         for (uint8_t i = 0; i < 8; i++) {
             compiler_barrier();
             if (dataOut & 0x1) {
