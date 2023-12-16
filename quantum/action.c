@@ -129,7 +129,7 @@ void action_exec(keyevent_t event) {
     if (IS_EVENT(record.event)) {
         ac_dprintf("processed: ");
         debug_record(record);
-        dprintln();
+        ac_dprintf("\n");
     }
 #endif
 }
