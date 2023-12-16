@@ -838,10 +838,22 @@ void send_report(uint8_t endpoint, void *report, size_t size) {
          * every iteration - otherwise the system will remain locked,
          * no interrupts served, so USB not going through as well.
          * Note: for suspend, need USB_USE_WAIT == TRUE in halconf.h */
+#if USB_USE_WAIT == TRUE
         if (osalThreadSuspendTimeoutS(&(&USB_DRIVER)->epc[endpoint]->in_state->thread, TIME_MS2I(10)) == MSG_TIMEOUT) {
             osalSysUnlock();
             return;
         }
+#else
+        while (usbGetDriverStateI(&USB_DRIVER) == USB_ACTIVE &&
+               usbGetTransmitStatusI(&USB_DRIVER, endpoint)) {
+            osalSysUnlock();
+            while (usbGetDriverStateI(&USB_DRIVER) == USB_ACTIVE &&
+                   usbGetTransmitStatusI(&USB_DRIVER, endpoint)) {
+                asm volatile("" ::: "memory");
+            }
+            osalSysLock();
+        }
+#endif
     }
     usbStartTransmitI(&USB_DRIVER, endpoint, report, size);
     osalSysUnlock();
