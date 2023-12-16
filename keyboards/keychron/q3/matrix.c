@@ -24,12 +24,11 @@
 // Pin connected to ST_CP of 74HC595
 #define LATCH_PIN B0
 
-#ifdef MATRIX_ROW_PINS
-static const pin_t row_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
-#endif // MATRIX_ROW_PINS
-#ifdef MATRIX_COL_PINS
-static const pin_t col_pins[MATRIX_COLS] = MATRIX_COL_PINS;
-#endif // MATRIX_COL_PINS
+#define DEFINE_MATRIX_PINS()                                \
+    const pin_t row_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;    \
+    const pin_t col_pins[MATRIX_COLS] = MATRIX_COL_PINS;    \
+    (void)row_pins;                                         \
+    (void)col_pins;
 
 #define ROWS_PER_HAND (MATRIX_ROWS)
 
@@ -140,6 +139,8 @@ static void shiftout_single_latch(void) {
 }
 
 static bool select_col(uint8_t col) {
+    DEFINE_MATRIX_PINS();
+
     pin_t pin = col_pins[col];
 
     if (pin != NO_PIN) {
@@ -161,6 +162,8 @@ static bool select_col(uint8_t col) {
 }
 
 static void unselect_col(uint8_t col) {
+    DEFINE_MATRIX_PINS();
+
     pin_t pin = col_pins[col];
 
     if (pin != NO_PIN) {
@@ -175,6 +178,8 @@ static void unselect_col(uint8_t col) {
 }
 
 static void unselect_cols(void) {
+    DEFINE_MATRIX_PINS();
+
     // unselect column pins
     for (uint8_t x = 0; x < MATRIX_COLS; x++) {
         pin_t pin = col_pins[x];
@@ -193,6 +198,8 @@ static void unselect_cols(void) {
 }
 
 static void matrix_init_pins(void) {
+    DEFINE_MATRIX_PINS();
+
     setPinOutput(DATA_PIN);
     setPinOutput(CLOCK_PIN);
     setPinOutput(LATCH_PIN);
@@ -221,14 +228,24 @@ typedef uint32_t ioport_t;
 typedef ioportmask_t ioport_t;
 #endif
 
-#define read_pin_port_required(prev_index, pin) \
-    ((uint8_t)(prev_index) == (uint8_t)-1 || row_pins[(prev_index)] == NO_PIN || PAL_PORT(pin) != PAL_PORT(row_pins[(prev_index)]))
+static inline bool read_pin_port_required(uint8_t row_index)
+{
+    DEFINE_MATRIX_PINS();
+
+    if (row_index == 0)
+        return true;
+    if (row_pins[row_index - 1] == NO_PIN)
+        return true;
+    return PAL_PORT(row_pins[row_index]) != PAL_PORT(row_pins[row_index - 1]);
+}
 
 #define read_pin_port(pin) ((ioport_t)palReadPort(PAL_PORT((pin))))
 
 #define is_pin_set(val, pin) (((val) & (1U << PAL_PAD((pin)))) != 0)
 
 static void matrix_read_rows_on_col(matrix_row_t current_matrix[], uint8_t current_col, matrix_row_t row_shifter) {
+    DEFINE_MATRIX_PINS();
+
     bool key_pressed = false;
     ioport_t ports[ROWS_PER_HAND];
 
@@ -247,7 +264,7 @@ static void matrix_read_rows_on_col(matrix_row_t current_matrix[], uint8_t curre
         if (pin == NO_PIN)
             continue;
         // Only read port if we need to
-        if (read_pin_port_required(row_index - 1, pin))
+        if (read_pin_port_required(row_index))
             ports[row_index] = read_pin_port(pin);
         else
             ports[row_index] = ports[row_index - 1];
