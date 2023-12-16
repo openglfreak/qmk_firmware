@@ -301,6 +301,7 @@ void matrix_init_custom(void) {
     matrix_init_pins();
 }
 
+__attribute__((flatten))
 bool matrix_scan_custom(matrix_row_t current_matrix[]) {
     matrix_row_t curr_matrix[MATRIX_ROWS] = {0};
 

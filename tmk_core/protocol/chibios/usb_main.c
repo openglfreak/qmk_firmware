@@ -466,7 +466,7 @@ bool last_suspend_state = false;
 
 void usb_event_queue_task(void) {
     usbevent_t event;
-    while (usb_event_queue_dequeue(&event)) {
+    while (CC_UNLIKELY(usb_event_queue_dequeue(&event))) {
         switch (event) {
             case USB_EVENT_SUSPEND:
                 last_suspend_state = true;
@@ -1046,7 +1046,7 @@ void raw_hid_task(void) {
     size_t  size = 0;
     do {
         size = chnReadTimeout(&drivers.raw_driver.driver, buffer, sizeof(buffer), TIME_IMMEDIATE);
-        if (size > 0) {
+        if (CC_UNLIKELY(size > 0)) {
             raw_hid_receive(buffer, size);
         }
     } while (size > 0);

@@ -29,15 +29,13 @@
         }                               \
     } while (0)
 
-#ifdef WAIT_US_TIMER
-void wait_us(uint16_t duration);
-#elif PORT_SUPPORTS_RT == TRUE
-#    define wait_us(us)                                            \
+#if PORT_SUPPORTS_RT == TRUE
+#    define wait_us_notimer(us)                                    \
         do {                                                       \
             chSysPolledDelayX(US2RTC(REALTIME_COUNTER_CLOCK, us)); \
         } while (0)
 #else
-#    define wait_us(us)                     \
+#    define wait_us_notimer(us)             \
         do {                                \
             if (us != 0) {                  \
                 chThdSleepMicroseconds(us); \
@@ -45,6 +43,12 @@ void wait_us(uint16_t duration);
                 chThdSleepMicroseconds(1);  \
             }                               \
         } while (0)
+#endif
+
+#ifdef WAIT_US_TIMER
+void wait_us(uint16_t duration);
+#else
+#define wait_us(us) wait_us_notimer(us)
 #endif
 
 #include "_wait.c"

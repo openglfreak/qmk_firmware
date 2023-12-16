@@ -35,7 +35,7 @@ void wait_us(uint16_t duration) {
         gptStart(&WAIT_US_TIMER, &gpt_cfg);
         gptPolledDelay(&WAIT_US_TIMER, duration);
     } else {
-        chThdSleepMicroseconds(duration);
+        wait_us_notimer(duration);
     }
 }
 #endif

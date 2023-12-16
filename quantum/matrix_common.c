@@ -169,6 +169,7 @@ __attribute__((weak)) void matrix_init(void) {
     matrix_init_kb();
 }
 
+__attribute__((flatten))
 __attribute__((weak)) uint8_t matrix_scan(void) {
     bool changed = matrix_scan_custom(raw_matrix);
 

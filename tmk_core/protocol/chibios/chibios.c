@@ -184,7 +184,7 @@ void protocol_pre_task(void) {
     usb_event_queue_task();
 
 #if !defined(NO_USB_STARTUP_CHECK)
-    if (USB_DRIVER.state == USB_SUSPENDED) {
+    if (CC_UNLIKELY(USB_DRIVER.state == USB_SUSPENDED)) {
         dprintln("suspending keyboard");
         while (USB_DRIVER.state == USB_SUSPENDED) {
             /* Do this in the suspended state */

@@ -193,10 +193,12 @@ static uint32_t last_matrix_scan_count = 0;
 void matrix_scan_perf_task(void) {
     matrix_scan_count++;
 
-    uint32_t timer_now = timer_read32();
-    if (TIMER_DIFF_32(timer_now, matrix_timer) >= 1000) {
+    uint32_t timer_now = (uint32_t)chVTGetSystemTimeX();
+    if (chTimeDiffX(matrix_timer, timer_now) >= TIME_S2I(1)) {
 #    if defined(CONSOLE_ENABLE)
-        dprintf("matrix scan frequency: %lu\n", matrix_scan_count);
+        uint32_t actual_scan_count = (matrix_scan_count * TIME_S2I(1) + TIME_S2I(1) / 2)
+                                     / chTimeDiffX(matrix_timer, timer_now);
+        dprintf("matrix scan frequency: %lu\n", actual_scan_count);
 #    endif
         last_matrix_scan_count = matrix_scan_count;
         matrix_timer           = timer_now;

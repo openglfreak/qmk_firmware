@@ -55,33 +55,13 @@ static void handle_backlight_caps_lock(led_t led_state) {
 }
 #endif
 
-static uint32_t last_led_modification_time = 0;
-uint32_t        last_led_activity_time(void) {
-    return last_led_modification_time;
-}
-uint32_t last_led_activity_elapsed(void) {
-    return timer_elapsed32(last_led_modification_time);
-}
+void led_set_user_defimpl(uint8_t usb_led) {}
 
-/** \brief Lock LED set callback - keymap/user level
- *
- * \deprecated Use led_update_user() instead.
- */
-__attribute__((weak)) void led_set_user(uint8_t usb_led) {}
-
-/** \brief Lock LED update callback - keymap/user level
- *
- * \return True if led_update_kb() should run its own code, false otherwise.
- */
-__attribute__((weak)) bool led_update_user(led_t led_state) {
+bool led_update_user_defimpl(led_t led_state) {
     return true;
 }
 
-/** \brief Lock LED update callback - keyboard level
- *
- * \return Ignored for now.
- */
-__attribute__((weak)) bool led_update_kb(led_t led_state) {
+bool led_update_kb_defimpl(led_t led_state) {
     bool res = led_update_user(led_state);
     if (res) {
         led_update_ports(led_state);
@@ -89,9 +69,7 @@ __attribute__((weak)) bool led_update_kb(led_t led_state) {
     return res;
 }
 
-/** \brief Write LED state to hardware
- */
-__attribute__((weak)) void led_update_ports(led_t led_state) {
+void led_update_ports_defimpl(led_t led_state) {
 #if LED_PIN_ON_STATE == 0
     // invert the whole thing to avoid having to conditionally !led_state.x later
     led_state.raw = ~led_state.raw;
@@ -113,6 +91,32 @@ __attribute__((weak)) void led_update_ports(led_t led_state) {
     writePin(LED_KANA_PIN, led_state.kana);
 #endif
 }
+
+/** \brief Lock LED set callback - keymap/user level
+ *
+ * \deprecated Use led_update_user() instead.
+ */
+__attribute__((weak,alias("led_set_user_defimpl")))
+extern void led_set_user(uint8_t usb_led);
+
+/** \brief Lock LED update callback - keymap/user level
+ *
+ * \return True if led_update_kb() should run its own code, false otherwise.
+ */
+__attribute__((weak,alias("led_update_user_defimpl")))
+extern bool led_update_user(led_t led_state);
+
+/** \brief Lock LED update callback - keyboard level
+ *
+ * \return Ignored for now.
+ */
+__attribute__((weak,alias("led_update_kb_defimpl")))
+extern bool led_update_kb(led_t led_state);
+
+/** \brief Write LED state to hardware
+ */
+__attribute__((weak,alias("led_update_ports_defimpl")))
+extern void led_update_ports(led_t led_state);
 
 /** \brief Initialise any LED related hardware and/or state
  */
@@ -139,9 +143,7 @@ __attribute__((weak)) void led_init_ports(void) {
 #endif
 }
 
-/** \brief Entrypoint for protocol to LED binding
- */
-__attribute__((weak)) void led_set(uint8_t usb_led) {
+void led_set_defimpl(uint8_t usb_led) {
 #ifdef BACKLIGHT_CAPS_LOCK
     handle_backlight_caps_lock((led_t)usb_led);
 #endif
@@ -149,6 +151,11 @@ __attribute__((weak)) void led_set(uint8_t usb_led) {
     led_set_user(usb_led);
     led_update_kb((led_t)usb_led);
 }
+
+/** \brief Entrypoint for protocol to LED binding
+ */
+__attribute__((weak, alias("led_set_defimpl")))
+extern void led_set(uint8_t usb_led);
 
 /** \brief Trigger behaviour on transition to suspend
  */
@@ -169,6 +176,18 @@ void led_wakeup(void) {
     led_set(host_keyboard_leds());
 }
 
+static bool can_skip_led_task(void) {
+#if defined(BACKLIGHT_CAPS_LOCK) || defined(LED_NUM_LOCK_PIN) || defined(LED_CAPS_LOCK_PIN) || defined(LED_SCROLL_LOCK_PIN) || defined(LED_COMPOSE_PIN) || defined(LED_KANA_PIN)
+    return false;
+#else
+    return &led_set_user == &led_set_user_defimpl &&
+           &led_update_user == &led_update_user_defimpl &&
+           &led_update_kb == &led_update_kb_defimpl &&
+           &led_update_ports == &led_update_ports_defimpl &&
+           &led_set == &led_set_defimpl;
+#endif
+}
+
 /** \brief set host led state
  *
  * Only sets state if change detected
@@ -176,13 +195,19 @@ void led_wakeup(void) {
 void led_task(void) {
     static uint8_t last_led_status = 0;
 
+    if (can_skip_led_task()) {
+#ifndef NO_DEBUG
+    if (CC_LIKELY(!debug_keyboard))
+#endif
+        return;
+    }
+
     // update LED
     uint8_t led_status = host_keyboard_leds();
     if (last_led_status != led_status) {
-        last_led_status            = led_status;
-        last_led_modification_time = timer_read32();
+        last_led_status = led_status;
 
-        if (debug_keyboard) {
+        if (CC_UNLIKELY(debug_keyboard)) {
             debug("led_task: ");
             debug_hex8(led_status);
             debug("\n");
