@@ -109,12 +109,28 @@ static void shiftout_single(uint8_t data) {
     }
 }
 
-static void shiftout_single_continue(void) {
+static void shiftout_single_init(uint8_t data) {
+    ATOMIC_BLOCK_FORCEON {
+        if (data & 0x1) {
+            writePinHigh(DATA_PIN);
+        } else {
+            writePinLow(DATA_PIN);
+        }
+    }
+}
+
+static void shiftout_single_clock(void) {
     ATOMIC_BLOCK_FORCEON {
         compiler_barrier();
         writePinHigh(CLOCK_PIN);
         small_delay();
         writePinLow(CLOCK_PIN);
+        compiler_barrier();
+    }
+}
+
+static void shiftout_single_latch(void) {
+    ATOMIC_BLOCK_FORCEON {
         compiler_barrier();
         writePinHigh(LATCH_PIN);
         small_delay();
@@ -136,7 +152,9 @@ static bool select_col(uint8_t col) {
     } else {
         if (col == 8) {
             shiftout_single(0x00);
+            shiftout_single_init(0x01);
         }
+        shiftout_single_clock();
         return true;
     }
     return false;
@@ -152,11 +170,7 @@ static void unselect_col(uint8_t col) {
         setPinInputHigh_atomic(pin);
 #endif
     } else {
-        if (col == 8) {
-            shiftout_single(0x01);
-        } else {
-            shiftout_single_continue();
-        }
+        shiftout_single_latch();
     }
 }
 
