@@ -440,6 +440,7 @@ RGB_MATRIX_DRIVER := snled27351
 endif
 
 RGB_MATRIX_ENABLE ?= no
+RGB_MATRIX_THREADED ?= no
 
 VALID_RGB_MATRIX_TYPES := aw20216s is31fl3218 is31fl3731 is31fl3733 is31fl3736 is31fl3737 is31fl3741 is31fl3742a is31fl3743a is31fl3745 is31fl3746a snled27351 ws2812 custom
 ifeq ($(strip $(RGB_MATRIX_ENABLE)), yes)
@@ -448,6 +449,9 @@ ifeq ($(strip $(RGB_MATRIX_ENABLE)), yes)
     endif
     OPT_DEFS += -DRGB_MATRIX_ENABLE
     OPT_DEFS += -DRGB_MATRIX_$(strip $(shell echo $(RGB_MATRIX_DRIVER) | tr '[:lower:]' '[:upper:]'))
+    ifeq ($(strip $(RGB_MATRIX_THREADED)), yes)
+        OPT_DEFS += -DRGB_MATRIX_THREADED
+    endif
 
     COMMON_VPATH += $(QUANTUM_DIR)/rgb_matrix
     COMMON_VPATH += $(QUANTUM_DIR)/rgb_matrix/animations
