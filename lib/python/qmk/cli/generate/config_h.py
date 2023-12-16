@@ -173,6 +173,8 @@ def generate_led_animations_config(feature, led_feature_json, config_h_lines, en
         if led_feature_json['animations'][animation]:
             config_h_lines.append(generate_define(f'{enable_prefix}{animation.upper()}'))
 
+    if feature == 'rgb_matrix' and led_feature_json.get('threaded', False):
+        config_h_lines.append(generate_define(f'{feature.upper()}_THREADED'))
 
 @cli.argument('filename', nargs='?', arg_only=True, type=FileType('r'), completer=FilesCompleter('.json'), help='A configurator export JSON to be compiled and flashed or a pre-compiled binary firmware file (bin/hex) to be flashed.')
 @cli.argument('-o', '--output', arg_only=True, type=normpath, help='File to write to')
