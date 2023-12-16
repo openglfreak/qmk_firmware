@@ -126,8 +126,12 @@ bool matrix_post_scan(void) {
 __attribute__((weak)) void matrix_io_delay(void) {
     wait_us(MATRIX_IO_DELAY);
 }
+/* Also for backwards compatibility, use matrix_output_select_delay2 instead. */
 __attribute__((weak)) void matrix_output_select_delay(void) {
     waitInputPinDelay();
+}
+__attribute__((weak)) void matrix_output_select_delay2(uint8_t line) {
+    matrix_output_select_delay();
 }
 __attribute__((weak)) void matrix_output_unselect_delay(uint8_t line, bool key_pressed) {
     matrix_io_delay();
