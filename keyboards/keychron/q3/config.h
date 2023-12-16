@@ -41,5 +41,8 @@
 /* turn off effects when suspended */
 #define RGB_DISABLE_WHEN_USB_SUSPENDED
 
+/* Ignore atomic blocks as they are unnecessary on this MCU */
+#define IGNORE_ATOMIC_BLOCK
+
 #define RGB_MATRIX_KEYPRESSES
 #define RGB_MATRIX_FRAMEBUFFER_EFFECTS
