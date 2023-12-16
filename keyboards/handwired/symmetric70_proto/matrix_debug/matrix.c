@@ -136,7 +136,7 @@ static bool read_cols_on_row(matrix_row_t current_matrix[], uint8_t current_row)
 
     // Select row
     select_row(current_row);
-    matrix_output_select_delay();
+    matrix_output_select_delay2(current_row);
 
     // For each col...
     for (uint8_t col_index = 0; col_index < MATRIX_COLS; col_index++) {
@@ -242,7 +242,7 @@ static bool read_rows_on_col(matrix_row_t current_matrix[], uint8_t current_col)
 
     // Select col
     select_col(current_col);
-    matrix_output_select_delay();
+    matrix_output_select_delay2(current_col);
 
     // For each row...
     for (uint8_t row_index = 0; row_index < MATRIX_ROWS; row_index++) {

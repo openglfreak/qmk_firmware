@@ -102,7 +102,7 @@ LOCAL_FUNC ALWAYS_INLINE void select_line_and_read_input_ports(uint8_t current_l
 LOCAL_FUNC void select_line_and_read_input_ports(uint8_t current_line, port_width_t port_buffer[NUM_OF_INPUT_PORTS]) {
     // Select row (or col)
     select_output(current_line);
-    matrix_output_select_delay();
+    matrix_output_select_delay2(current_line);
 
     // Read ports
     read_all_input_ports(port_buffer, false);

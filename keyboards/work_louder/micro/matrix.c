@@ -88,7 +88,7 @@ void matrix_read_cols_on_row(matrix_row_t current_matrix[], uint8_t current_row)
     if (!select_row(current_row)) { // Select row
         return;                     // skip NO_PIN row
     }
-    matrix_output_select_delay();
+    matrix_output_select_delay2(current_row);
 
     // For each col...
     matrix_row_t row_shifter = MATRIX_ROW_SHIFTER;

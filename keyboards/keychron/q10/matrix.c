@@ -161,12 +161,12 @@ static void matrix_read_rows_on_col(matrix_row_t current_matrix[], uint8_t curre
     }
 
     if (current_col < (MATRIX_COLS - 8)) {
-        matrix_output_select_delay();
+        matrix_output_select_delay2(current_col);
     } else {
-        matrix_output_select_delay();
-        matrix_output_select_delay();
-        matrix_output_select_delay();
-        matrix_output_select_delay();
+        matrix_output_select_delay2(current_col);
+        matrix_output_select_delay2(current_col);
+        matrix_output_select_delay2(current_col);
+        matrix_output_select_delay2(current_col);
     }
 
     // For each row...

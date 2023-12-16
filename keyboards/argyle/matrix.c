@@ -108,7 +108,7 @@ static bool matrix_read_cols_on_row(matrix_row_t current_matrix[], uint8_t curre
 
     // Select row and wait for row selecton to stabilize
     select_row(current_row);
-    matrix_output_select_delay();
+    matrix_output_select_delay2(current_row);
 
     uint8_t port_expander_buffer;
     i2c_readReg((PORT_EXPANDER_ADDRESS << 1), 0x09, &port_expander_buffer, 1, 20);

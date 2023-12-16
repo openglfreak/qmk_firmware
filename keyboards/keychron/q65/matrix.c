@@ -190,7 +190,7 @@ static void matrix_read_rows_on_col(matrix_row_t current_matrix[], uint8_t curre
         return;                     // skip NO_PIN col
     }
 
-    matrix_output_select_delay();
+    matrix_output_select_delay2(current_col);
 
     // For each row...
     for (uint8_t row_index = 0; row_index < ROWS_PER_HAND; row_index++) {
